@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Platform game Java:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Platform_game_Java_jar</output-path>
+    <root id="archive" name="Platform game Java.jar">
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/META-INF/MANIFEST.MF" />
+      </element>
+      <element id="module-output" name="Platform game Java" />
+      <element id="dir-copy" path="$PROJECT_DIR$/Res/audio" />
+      <element id="dir-copy" path="$PROJECT_DIR$/Res/lvls" />
+      <element id="directory" name="res" />
+    </root>
+  </artifact>
+</component>

@@ -1,0 +1,16 @@
+//package entities;
+//
+//public enum PlayerCharacters {
+//    PIRATE,ORC,SOLDIER;
+//    public static final int IDLE = 0;
+//    public static final int RUNNING = 1;
+//    public static final int JUMP = 2;
+//    public static final int FALLING = 3;
+//    public static final int ATTACK = 4;
+//    public static final int HIT = 5;
+//    public static final int DEAD = 6;
+//
+//    PlayerCharacters(int spriteA_IDLE,in){
+//
+//    }
+//}
