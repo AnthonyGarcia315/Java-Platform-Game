@@ -4,6 +4,7 @@ import static util.Constants.PlayerConstants.*;
 import static util.HelpMethods.*;
 import static util.Constants.*;
 import static util.Constants.Directions.*;
+
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Point;
@@ -19,7 +20,6 @@ public class Player extends Entity {
 
     private BufferedImage[][] animations;
     private boolean moving = false, attacking = false;
-    private boolean canDoubleJump = false;
     private boolean left, right, jump;
     private int[][] lvlData;
 //    private float xDrawOffset = 21 * Game.SCALE;
@@ -50,7 +50,6 @@ public class Player extends Entity {
     private int powerWidth = powerBarWidth;
     private int powerMaxValue = 200;
     private int powerValue = powerMaxValue;
-    private java.util.ArrayList<effects.DamageNumber> damageNumbers = new java.util.ArrayList<>();
 
     private int flipX = 0;
     private int flipW = 1;
@@ -62,19 +61,23 @@ public class Player extends Entity {
 
     private boolean powerAttackActive;
     private int powerAttackTick;
-    private int powerGrowSpeed = 50;
+    private int powerGrowSpeed = 15;
     private int powerGrowTick;
+    private boolean canDoubleJump = false;
+    private boolean jumpLocked = false;
+
     private final PlayerCharacters playerCharacter;
 
     public Player(PlayerCharacters playerCharacter, Playing playing) {
-        super(0, 0, (int) (playerCharacter.spriteW*Game.SCALE), (int) (playerCharacter.spriteH*Game.SCALE));
-        this.playerCharacter= playerCharacter;
+        super(0, 0, (int) (playerCharacter.spriteW * Game.SCALE), (int) (playerCharacter.spriteH * Game.SCALE));
+        this.playerCharacter = playerCharacter;
         this.playing = playing;
         this.state = IDLE;
         this.maxHealth = 100;
         this.currentHealth = maxHealth;
         this.walkSpeed = Game.SCALE * 1.0f;
-        loadAnimations();
+        animations = LoadSave.loadAnimations(playerCharacter);
+        statusBarImg = LoadSave.GetSpriteAtlas(LoadSave.STATUS_BAR);
         initHitbox(playerCharacter.hitboxW, playerCharacter.hitboxH);
         initAttackBox();
     }
@@ -94,13 +97,6 @@ public class Player extends Entity {
     public void update() {
         updateHealthBar();
         updatePowerBar();
-        for (int i = damageNumbers.size() - 1; i >= 0; i--) {
-            effects.DamageNumber dn = damageNumbers.get(i);
-            dn.update();
-            if (!dn.isActive()) {
-                damageNumbers.remove(i);
-            }
-        }
 
         if (currentHealth <= 0) {
             if (state != DEAD) {
@@ -108,7 +104,6 @@ public class Player extends Entity {
                 aniTick = 0;
                 aniIndex = 0;
                 playing.setPlayerDying(true);
-                playing.getGame().getStatsTracker().recordDeath(hitbox);
                 playing.getGame().getAudioPlayer().playEffect(AudioPlayer.DIE);
 
                 // Check if player died in air
@@ -116,7 +111,7 @@ public class Player extends Entity {
                     inAir = true;
                     airSpeed = 0;
                 }
-            } else if (aniIndex == playerCharacter.GetSpriteAmount(DEAD) - 1 && aniTick >= ANI_SPEED - 1) {
+            } else if (aniIndex == playerCharacter.getSpriteAmount(DEAD) - 1 && aniTick >= ANI_SPEED - 1) {
                 playing.setGameOver(true);
                 playing.getGame().getAudioPlayer().stopSong();
                 playing.getGame().getAudioPlayer().playEffect(AudioPlayer.GAMEOVER);
@@ -139,7 +134,7 @@ public class Player extends Entity {
         updateAttackBox();
 
         if (state == HIT) {
-            if (aniIndex <= playerCharacter.GetSpriteAmount(state) - 3)
+            if (aniIndex <= playerCharacter.getSpriteAmount(state) - 3)
                 pushBack(pushBackDir, lvlData, 1.25f);
             updatePushBackDrawOffset();
         } else
@@ -184,11 +179,16 @@ public class Player extends Entity {
             return;
         attackChecked = true;
 
-        if (powerAttackActive)
-            attackChecked = false;
-        int damage = powerAttackActive ? 1000: 20;
+        // Base damage for a normal attack
+        int damage = 20;
 
-        playing.checkEnemyHit(attackBox,damage);
+        if (powerAttackActive) {
+            attackChecked = false;
+            damage = 40; // Power attacks do double damage!
+        }
+
+        // Now we pass the damage amount to the Playing class!
+        playing.checkEnemyHit(attackBox, damage);
         playing.checkObjectHit(attackBox);
         playing.getGame().getAudioPlayer().playAttackSound();
     }
@@ -223,7 +223,6 @@ public class Player extends Entity {
 
     private void updatePowerBar() {
         powerWidth = (int) ((powerValue / (float) powerMaxValue) * powerBarWidth);
-
         powerGrowTick++;
         if (powerGrowTick >= powerGrowSpeed) {
             powerGrowTick = 0;
@@ -232,13 +231,10 @@ public class Player extends Entity {
     }
 
     public void render(Graphics g, int lvlOffset) {
-        g.drawImage(animations[playerCharacter.getRowIndex(state)][aniIndex], (int) (hitbox.x - playerCharacter.drawXoffset) - lvlOffset + flipX, (int) (hitbox.y - playerCharacter.drawYoffset + (int) (pushDrawOffset)), width * flipW, height, null);
-//		drawHitbox(g, lvlOffset);
+        g.drawImage(animations[playerCharacter.getRowIndex(state)][aniIndex], (int) (hitbox.x - playerCharacter.xDrawOffset) - lvlOffset + flipX, (int) (hitbox.y - playerCharacter.yDrawOffset + (int) (pushDrawOffset)), width * flipW, height, null);
+        drawHitbox(g, lvlOffset);
 //		drawAttackBox(g, lvlOffset);
         drawUI(g);
-        for (effects.DamageNumber dn : damageNumbers) {
-            dn.draw(g, lvlOffset);
-        }
     }
 
     private void drawUI(Graphics g) {
@@ -259,7 +255,7 @@ public class Player extends Entity {
         if (aniTick >= ANI_SPEED) {
             aniTick = 0;
             aniIndex++;
-            if (aniIndex >= playerCharacter.GetSpriteAmount(state)) {
+            if (aniIndex >= playerCharacter.getSpriteAmount(state)) {
                 aniIndex = 0;
                 attacking = false;
                 attackChecked = false;
@@ -276,34 +272,26 @@ public class Player extends Entity {
     private void setAnimation() {
         int startAni = state;
 
-        // 1. If we are stunned, do nothing else
         if (state == HIT)
             return;
 
-        // 2. PRIORITY: If we are dashing/power attacking, force this state!
-        // This stops the jump/fall loops from overwriting our dash physics mid-air.
-        if (powerAttackActive) {
-            state = ATTACK;
-            // Only reset frames if we just entered the attack state
-            if (startAni != ATTACK) {
-                aniIndex = 1;
-                aniTick = 0;
-            }
-            return; // Exit early so air checks are ignored!
-        }
-
-        // 3. Ground movement defaults
         if (moving)
             state = RUNNING;
         else
             state = IDLE;
 
-        // 4. Air overrides (Only if we aren't dashing!)
         if (inAir) {
             if (airSpeed < 0)
                 state = JUMP;
             else
                 state = FALLING;
+        }
+
+        if (powerAttackActive) {
+            state = ATTACK;
+            aniIndex = 1;
+            aniTick = 0;
+            return;
         }
 
         if (attacking) {
@@ -314,7 +302,6 @@ public class Player extends Entity {
                 return;
             }
         }
-
         if (startAni != state)
             resetAniTick();
     }
@@ -382,25 +369,31 @@ public class Player extends Entity {
         moving = true;
     }
 
-    public void jump() {
-        if (!inAir) {
-            // Standard First Jump from the ground
-            inAir = true;
-            airSpeed = jumpSpeed;
-            canDoubleJump = true;
-            jump=false;// Permitting a double jump once they leave the ground
-        } else if (canDoubleJump) {
-            // Second Jump mid-air!
-            airSpeed = jumpSpeed * 0.85f; // Slight dampening so the second jump isn't overpoweringly high
-            canDoubleJump = false;
-            jump=false;// Consuming the double jump
+    private void jump() {
+        if (jumpLocked) return; // Stop if they haven't let go of the key yet!
+
+        if (inAir) {
+            if (canDoubleJump) {
+                canDoubleJump = false;
+                airSpeed = jumpSpeed;
+                playing.getGame().getAudioPlayer().playEffect(AudioPlayer.JUMP);
+                jumpLocked = true; // Lock it again!
+            }
+            return;
         }
+
+        // Normal Jump
+        playing.getGame().getAudioPlayer().playEffect(AudioPlayer.JUMP);
+        inAir = true;
+        airSpeed = jumpSpeed;
+        canDoubleJump = true;
+        jumpLocked = true; // Lock it!
     }
 
     private void resetInAir() {
         inAir = false;
         airSpeed = 0;
-        canDoubleJump=false;
+        canDoubleJump = false; // Reset it when we touch the ground
     }
 
     private void updateXPos(float xSpeed) {
@@ -421,7 +414,6 @@ public class Player extends Entity {
                 return;
             else
                 newState(HIT);
-            damageNumbers.add(new effects.DamageNumber(hitbox.x + (hitbox.width / 2), hitbox.y, Math.abs(value),java.awt.Color.RED));
         }
 
         currentHealth += value;
@@ -432,6 +424,8 @@ public class Player extends Entity {
         if (state == HIT)
             return;
         changeHealth(value);
+        // Spawn Red text for player damage!
+        playing.addDamageText((int) hitbox.x, (int) hitbox.y, Math.abs(value), Color.RED);
         pushBackOffsetDir = UP;
         pushDrawOffset = 0;
 
@@ -450,17 +444,6 @@ public class Player extends Entity {
         powerValue = Math.max(Math.min(powerValue, powerMaxValue), 0);
     }
 
-    private void loadAnimations() {
-        BufferedImage img = LoadSave.GetSpriteAtlas(playerCharacter.playerAtlas);
-        animations = new BufferedImage[playerCharacter.rowA][playerCharacter.colA];
-        int spriteW = playerCharacter.getSpriteW();
-        int spriteH = playerCharacter.getSpriteH();
-        for (int j = 0; j < animations.length; j++)
-            for (int i = 0; i < animations[j].length; i++)
-                animations[j][i] = img.getSubimage(i * spriteW, j * spriteH, spriteW, spriteH);
-        System.out.println(playerCharacter.playerAtlas);
-        statusBarImg = LoadSave.GetSpriteAtlas(LoadSave.STATUS_BAR);
-    }
 
     public void loadLvlData(int[][] lvlData) {
         this.lvlData = lvlData;
@@ -495,16 +478,18 @@ public class Player extends Entity {
 
     public void setJump(boolean jump) {
         this.jump = jump;
+        // When you let go of the spacebar, unlock the jump!
+        if (!jump) {
+            jumpLocked = false;
+        }
     }
 
     public void resetAll() {
         resetDirBooleans();
-        damageNumbers.clear(); // 🌟 Clear residual text popups on death/reset
         inAir = false;
         attacking = false;
         moving = false;
         airSpeed = 0f;
-        jump=false;
         state = IDLE;
         currentHealth = maxHealth;
         powerAttackActive = false;

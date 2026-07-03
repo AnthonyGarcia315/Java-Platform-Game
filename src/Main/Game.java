@@ -1,12 +1,11 @@
 package Main;
 
-import java.awt.*;
+import java.awt.Graphics;
 
-import GameStates.*;
-import GameStates.Menu;
 import audio.AudioPlayer;
+import GameStates.*;
 import UI.AudioOptions;
-import util.StatsTracker;
+import util.StatsTracker; // 🌟 Restored Import!
 
 public class Game implements Runnable {
 
@@ -14,14 +13,19 @@ public class Game implements Runnable {
     private Thread gameThread;
     private final int FPS_SET = 120;
     private final int UPS_SET = 200;
-    private GameWindow gameWindow;
+
+    private GameWindow gameWindow; // 🌟 Restored GameWindow reference!
 
     private Playing playing;
     private Menu menu;
     private Credits credits;
+    private PlayerSelection playerSelection;
     private GameOptions gameOptions;
     private AudioOptions audioOptions;
     private AudioPlayer audioPlayer;
+
+    private Stats stats; // 🌟 Restored Stats state!
+    private StatsTracker statsTracker; // 🌟 Restored Telemetry!
 
     public final static int TILES_DEFAULT_SIZE = 32;
     public final static float SCALE = 2f;
@@ -30,8 +34,6 @@ public class Game implements Runnable {
     public final static int TILES_SIZE = (int) (TILES_DEFAULT_SIZE * SCALE);
     public final static int GAME_WIDTH = TILES_SIZE * TILES_IN_WIDTH;
     public final static int GAME_HEIGHT = TILES_SIZE * TILES_IN_HEIGHT;
-    private Stats stats;
-    StatsTracker statsTracker;
 
     private final boolean SHOW_FPS_UPS = true;
 
@@ -39,13 +41,13 @@ public class Game implements Runnable {
         System.out.println("size: " + GAME_WIDTH + " : " + GAME_HEIGHT);
         initClasses();
         gamePanel = new GamePanel(this);
+
+        // 🌟 Restored Window Logic!
         gameWindow = new GameWindow(gamePanel);
         gamePanel.setFocusable(true);
+
         gamePanel.requestFocusInWindow();
         startGameLoop();
-    }
-    public GameWindow getGameWindow() {
-        return gameWindow;
     }
 
     private void initClasses() {
@@ -53,8 +55,11 @@ public class Game implements Runnable {
         audioPlayer = new AudioPlayer();
         menu = new Menu(this);
         playing = new Playing(this);
+        playerSelection = new PlayerSelection(this);
         credits = new Credits(this);
         gameOptions = new GameOptions(this);
+
+        // 🌟 Restored Stats initialization!
         statsTracker = new StatsTracker();
         stats = new GameStates.Stats(this);
     }
@@ -63,30 +68,28 @@ public class Game implements Runnable {
         gameThread = new Thread(this);
         gameThread.start();
     }
-    public util.StatsTracker getStatsTracker() {
-        return statsTracker;
-    }
 
     public void update() {
         switch (Gamestate.state) {
             case MENU -> menu.update();
+            case PLAYER_SELECTION -> playerSelection.update();
             case PLAYING -> playing.update();
             case OPTIONS -> gameOptions.update();
             case CREDITS -> credits.update();
+            case STATS -> stats.update(); // 🌟 Restored!
             case QUIT -> System.exit(0);
-            case STATS ->stats.update();
         }
     }
 
     @SuppressWarnings("incomplete-switch")
-// Locate your existing render method and change its signature parameters:
     public void render(Graphics g) {
-        switch (GameStates.Gamestate.state) {
+        switch (Gamestate.state) {
             case MENU -> menu.draw(g);
+            case PLAYER_SELECTION -> playerSelection.draw(g);
             case PLAYING -> playing.draw(g);
             case OPTIONS -> gameOptions.draw(g);
             case CREDITS -> credits.draw(g);
-            case STATS -> stats.draw(g);
+            case STATS -> stats.draw(g); // 🌟 Restored!
         }
     }
 
@@ -113,31 +116,24 @@ public class Game implements Runnable {
             previousTime = currentTime;
 
             if (deltaU >= 1) {
-
                 update();
                 updates++;
                 deltaU--;
-
             }
 
             if (deltaF >= 1) {
-
                 gamePanel.repaint();
                 frames++;
                 deltaF--;
-
             }
 
             if (SHOW_FPS_UPS)
                 if (System.currentTimeMillis() - lastCheck >= 1000) {
-
                     lastCheck = System.currentTimeMillis();
                     System.out.println("FPS: " + frames + " | UPS: " + updates);
                     frames = 0;
                     updates = 0;
-
                 }
-
         }
     }
 
@@ -146,30 +142,16 @@ public class Game implements Runnable {
             playing.getPlayer().resetDirBooleans();
     }
 
-    public Menu getMenu() {
-        return menu;
-    }
+    // --- GETTERS ---
+    public GameWindow getGameWindow() { return gameWindow; } // 🌟 Restored!
+    public util.StatsTracker getStatsTracker() { return statsTracker; } // 🌟 Restored!
+    public Stats getStats() { return stats; } // 🌟 Restored!
 
-    public Playing getPlaying() {
-        return playing;
-    }
-
-    public Credits getCredits() {
-        return credits;
-    }
-
-    public GameOptions getGameOptions() {
-        return gameOptions;
-    }
-    public Stats getStats(){
-        return stats;
-    }
-
-    public AudioOptions getAudioOptions() {
-        return audioOptions;
-    }
-
-    public AudioPlayer getAudioPlayer() {
-        return audioPlayer;
-    }
+    public Menu getMenu() { return menu; }
+    public Playing getPlaying() { return playing; }
+    public Credits getCredits() { return credits; }
+    public PlayerSelection getPlayerSelection() { return playerSelection; }
+    public GameOptions getGameOptions() { return gameOptions; }
+    public AudioOptions getAudioOptions() { return audioOptions; }
+    public AudioPlayer getAudioPlayer() { return audioPlayer; }
 }

@@ -1,13 +1,18 @@
 package util;
 
+import entities.PlayerCharacters;
+
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.ArrayList;
+
 import javax.imageio.ImageIO;
 
 public class LoadSave {
+
     public static final String PLAYER_PIRATE = "player_sprites.png";
     public static final String PLAYER_ORC = "player_orc.png";
     public static final String PLAYER_SOLDIER = "player_soldier.png";
@@ -46,17 +51,29 @@ public class LoadSave {
     public static final String WATER_BOTTOM = "water.png";
     public static final String SHIP = "ship.png";
 
+
+    public static BufferedImage[][] loadAnimations(PlayerCharacters pc) {
+        BufferedImage img = LoadSave.GetSpriteAtlas(pc.playerAtlas);
+        BufferedImage[][] animations = new BufferedImage[pc.rowA][pc.colA];
+        for (int j = 0; j < animations.length; j++)
+            for (int i = 0; i < animations[j].length; i++)
+                animations[j][i] = img.getSubimage(i * pc.spriteW, j * pc.spriteH, pc.spriteW, pc.spriteH);
+
+        return animations;
+    }
+
+
     public static BufferedImage GetSpriteAtlas(String fileName) {
         BufferedImage img = null;
         InputStream is = LoadSave.class.getResourceAsStream("/" + fileName);
         try {
             img = ImageIO.read(is);
+
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             try {
-                if (is != null)
-                    is.close();
+                is.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -65,35 +82,35 @@ public class LoadSave {
     }
 
     public static BufferedImage[] GetAllLevels() {
-        ArrayList<BufferedImage> levelList = new ArrayList<>();
-        int levelIndex = 1;
+        URL url = LoadSave.class.getResource("/lvls");
+        File file = null;
 
-        while (true) {
-            // Check for /lvls/1.png, /lvls/2.png, etc.
-            InputStream is = LoadSave.class.getResourceAsStream("/lvls/" + levelIndex + ".png");
-
-            // If the resource stream returns null, it means we ran out of levels to load!
-            if (is == null) {
-                break;
-            }
-
-            try {
-                BufferedImage img = ImageIO.read(is);
-                levelList.add(img);
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    if (is != null)
-                        is.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            levelIndex++;
+        try {
+            file = new File(url.toURI());
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
         }
 
-        // Convert our dynamic array list back into a standard array to match your engine signature
-        return levelList.toArray(new BufferedImage[0]);
+        File[] files = file.listFiles();
+        File[] filesSorted = new File[files.length];
+
+        for (int i = 0; i < filesSorted.length; i++)
+            for (int j = 0; j < files.length; j++) {
+                if (files[j].getName().equals((i + 1) + ".png"))
+                    filesSorted[i] = files[j];
+
+            }
+
+        BufferedImage[] imgs = new BufferedImage[filesSorted.length];
+
+        for (int i = 0; i < imgs.length; i++)
+            try {
+                imgs[i] = ImageIO.read(filesSorted[i]);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        return imgs;
     }
+
 }
