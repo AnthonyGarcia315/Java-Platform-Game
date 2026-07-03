@@ -33,12 +33,22 @@ public class Level {
     private int maxTilesOffset;
     private int maxLvlOffsetX;
     private Point playerSpawn;
+    // 1. Put this with your other ArrayLists at the top
+    private ArrayList<Objects.Coin> coins;
+
+    // 2. Put this inside your Level constructor where you load potions/containers
+
+    // 3. Put this at the bottom with your other getters
+    public ArrayList<Objects.Coin> getCoins() {
+        return coins;
+    }
 
     public Level(BufferedImage img) {
         this.img = img;
         lvlData = new int[img.getHeight()][img.getWidth()];
         loadLevel();
         calcLvlOffsets();
+        coins = util.HelpMethods.GetCoins(img);
     }
 
     private void loadLevel() {

@@ -127,7 +127,13 @@ public class PauseOverlay {
 
     }
     private boolean isIn(MouseEvent e, PauseButton b){
-        return (b.getBounds().contains(e.getX(),e.getY()));
+        float scaleX = playing.getGame().getMouseXScale();
+        float scaleY = playing.getGame().getMouseYScale();
+
+        int gameMouseX = (int) (e.getX() / scaleX);
+        int gameMouseY = (int) (e.getY() / scaleY);
+
+        return (b.getBounds().contains(gameMouseX, gameMouseY));
     }
 
 }

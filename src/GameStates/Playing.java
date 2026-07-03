@@ -8,6 +8,7 @@ import java.awt.image.BufferedImage;
 import java.util.Random;
 import java.util.ArrayList;
 
+import Main.GameWindow;
 import entities.EnemyManager;
 import entities.Player;
 import entities.PlayerCharacters;
@@ -91,6 +92,7 @@ public class Playing extends State implements Statemethods {
 
     public Playing(Game game) {
         super(game);
+        System.out.println("DEBUG: Playing created. Tracker Hash: " + game.getStatsTracker().hashCode());
         initClasses();
 
         backgroundImg = LoadSave.GetSpriteAtlas(LoadSave.PLAYING_BG_IMG);
@@ -144,6 +146,10 @@ public class Playing extends State implements Statemethods {
         levelManager.setLevelIndex(levelManager.getLevelIndex() + 1);
         levelManager.loadNextLevel();
         player.setSpawn(levelManager.getCurrentLevel().getPlayerSpawn());
+
+        // 🌟 FIX: Recalculate camera bounds here too!
+        calcLvlOffset();
+
         resetAll();
         drawShip = false;
     }
@@ -333,6 +339,8 @@ public class Playing extends State implements Statemethods {
     }
 
     public void resetAll() {
+        game.getStatsTracker().revertCoins();
+        xLvlOffset=0;
         gameOver = false;
         paused = false;
         lvlCompleted = false;
@@ -383,11 +391,19 @@ public class Playing extends State implements Statemethods {
 
     @Override
     public void keyPressed(KeyEvent e) {
+        // 2. PAUSE / MENU CONTROLS
         if (e.getKeyCode() == KeyEvent.VK_TAB) {
             paused = !paused;
             return;
         }
 
+        // 3. CHEATS (Only if desired)
+        else if (e.getKeyCode() == KeyEvent.VK_F1) {
+            game.getStatsTracker().addCoins(100);
+            System.out.println("DEBUG: Added 100 coins!");
+        }
+
+        // 4. CONTEXT-SPECIFIC CONTROLS (Overlays & Player Movement)
         if (gameOver) {
             gameOverOverlay.keyPressed(e);
         } else if (gameCompleted) {
@@ -397,7 +413,15 @@ public class Playing extends State implements Statemethods {
                 case KeyEvent.VK_A -> player.setLeft(true);
                 case KeyEvent.VK_D -> player.setRight(true);
                 case KeyEvent.VK_SPACE -> player.setJump(true);
-                case KeyEvent.VK_ESCAPE -> System.exit(0);
+                // ESCAPE now handled via the toggle logic or menu transition
+                case KeyEvent.VK_ESCAPE -> {
+                    // Safely toggle out of Fullscreen if needed, then perform exit/menu logic
+                    if (game.getGameWindow().getCurrentMode() == Main.GameWindow.WindowMode.EXCLUSIVE_FULLSCREEN) {
+                        game.getGameWindow().setWindowMode(Main.GameWindow.WindowMode.WINDOWED);
+                    } else {
+                        Gamestate.state = Gamestate.MENU; // Or your preferred exit behavior
+                    }
+                }
             }
         }
     }
@@ -472,7 +496,10 @@ public class Playing extends State implements Statemethods {
 
     public void setLevelCompleted(boolean levelCompleted) {
         game.getAudioPlayer().lvlCompleted();
-        if (levelManager.getLevelIndex() + 1 >= levelManager.getAmountOfLevels()) {
+        game.getStatsTracker().lockInCoins();
+        int nextLevelIndex = levelManager.getLevelIndex() + 1;
+        game.getStatsTracker().unlockNextLevel(nextLevelIndex);
+        if (nextLevelIndex >= levelManager.getAmountOfLevels()) {
             gameCompleted = true;
             game.getStatsTracker().exportData(); // Saves your file!
             player.resetAll();
@@ -482,6 +509,33 @@ public class Playing extends State implements Statemethods {
             return;
         }
         this.lvlCompleted = levelCompleted;
+    }
+    public void resumeGame() {
+        // 1. Get the saved level from the Bank
+        int savedLevel = game.getStatsTracker().getHighestLevel();
+
+        // 2. Tell the LevelManager to switch to it
+        levelManager.setLevelIndex(savedLevel);
+
+        // 3. Load the physical level, enemies, and objects!
+        Levels.Level currentLvl = levelManager.getCurrentLevel();
+        enemyManager.loadEnemies(currentLvl);
+        objectManager.loadObjects(currentLvl);
+        player.loadLvlData(currentLvl.getLevelData());
+        player.setSpawn(currentLvl.getPlayerSpawn());
+
+        // 🌟 FIX 1: Recalculate camera bounds for this specific level!
+        calcLvlOffset();
+
+        // 🌟 FIX 2: Only draw the ship if we are on Level 1 (Index 0)
+        if (savedLevel == 0) {
+            drawShip = true;
+        } else {
+            drawShip = false;
+        }
+
+        // 4. Reset the state so you don't instantly die when loading in
+        resetAll();
     }
 
     public void setMaxLvlOffset(int lvlOffset) {

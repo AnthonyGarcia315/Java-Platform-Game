@@ -1,6 +1,8 @@
 package util;
 
 import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 
 import Main.Game;
 import Objects.Projectile;
@@ -31,6 +33,17 @@ public class HelpMethods {
         float yIndex = y / Game.TILES_SIZE;
 
         return IsTileSolid((int) xIndex, (int) yIndex, lvlData);
+    }
+    public static ArrayList<Objects.Coin> GetCoins(BufferedImage img) {
+        ArrayList<Objects.Coin> list = new ArrayList<>();
+        for (int j = 0; j < img.getHeight(); j++)
+            for (int i = 0; i < img.getWidth(); i++) {
+                java.awt.Color color = new java.awt.Color(img.getRGB(i, j));
+                int value = color.getBlue();
+                if (value == util.Constants.ObjectConstants.COIN)
+                    list.add(new Objects.Coin(i * Main.Game.TILES_SIZE, j * Main.Game.TILES_SIZE, value));
+            }
+        return list;
     }
 
     public static boolean IsProjectileHittingLevel(Projectile p, int[][] lvlData) {

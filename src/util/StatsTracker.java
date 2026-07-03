@@ -7,73 +7,101 @@ import java.util.ArrayList;
 
 public class StatsTracker {
 
-    private int totalEnemiesDefeated = 0;
-    private int totalDeaths = 0;
-    private int potionsCollected = 0;
-
-    // Storing exact coordinates of where the player died
+    // --- Stats Data ---
+    private int totalEnemiesDefeated, totalDeaths, potionsCollected;
+    private int coins, savedCoins;
+    private int highestLevel = 0;
     private ArrayList<String> deathLocations = new ArrayList<>();
 
-    public void recordEnemyDefeated() {
-        totalEnemiesDefeated++;
-    }
+    // --- Upgrades ---
+    private int bonusMaxHealth = 0;
+    private int bonusDamage = 0;
+    private boolean doubleJumpUnlocked = false;
+    private boolean speedBoostUnlocked = false;
+    private boolean fireBladeUnlocked = false;
 
-    public void recordPotionCollected() {
-        potionsCollected++;
-    }
+    // --- Record Methods ---
+    public void recordEnemyDefeated() { totalEnemiesDefeated++; }
+    public void recordPotionCollected() { potionsCollected++; }
 
     public void recordDeath(Rectangle2D.Float hitbox) {
         totalDeaths++;
-        // Format the coordinates to 2 decimal places for cleaner reading
-        String location = String.format("X: %.2f, Y: %.2f", hitbox.x, hitbox.y);
-        deathLocations.add(location);
+        deathLocations.add(String.format("X: %.2f, Y: %.2f", hitbox.x, hitbox.y));
     }
 
-    public void exportData() {
-        try {
-            // This creates a file right in your project folder
-            FileWriter writer = new FileWriter("Game_Telemetry_Data.txt");
+    // --- Upgrade Getters/Setters ---
+    public void setDoubleJumpUnlocked(boolean b) { this.doubleJumpUnlocked = b; }
+    public boolean isDoubleJumpUnlocked() { return doubleJumpUnlocked; }
 
+    public void setSpeedBoostUnlocked(boolean b) { this.speedBoostUnlocked = b; }
+    public boolean isSpeedBoostUnlocked() { return speedBoostUnlocked; }
+
+    public void addBonusMaxHealth(int amount) { this.bonusMaxHealth += amount; }
+    public int getBonusMaxHealth() { return bonusMaxHealth; }
+
+    public void addBonusDamage(int damage) { this.bonusDamage += damage; }
+    public int getBonusDamage() { return bonusDamage; }
+
+    public void unlockFireBlade(boolean b) { this.fireBladeUnlocked = b; }
+    public boolean hasFireBlade() { return fireBladeUnlocked; }
+
+    // --- Economy Methods ---
+    public void addCoins(int amount) { coins += amount; }
+    public void lockInCoins() { savedCoins = coins; }
+    public void revertCoins() { coins = savedCoins; }
+
+    public boolean spendCoins(int cost) {
+        if (coins >= cost) {
+            coins -= cost;
+            savedCoins = coins;
+            return true;
+        }
+        return false;
+    }
+    public int getCoins() { return coins; }
+
+    // --- Level Progression ---
+    public void unlockNextLevel(int nextLevelIndex) {
+        highestLevel = Math.max(highestLevel, nextLevelIndex);
+    }
+    public int getHighestLevel() { return highestLevel; }
+
+    // --- Data Persistence ---
+    public void exportData() {
+        try (FileWriter writer = new FileWriter("Game_Telemetry_Data.txt")) {
             writer.write("=== GAME COMPLETION TELEMETRY ===\n");
             writer.write("Total Enemies Defeated: " + totalEnemiesDefeated + "\n");
             writer.write("Potions Collected: " + potionsCollected + "\n");
             writer.write("Total Player Deaths: " + totalDeaths + "\n");
+            writer.write("DoubleJumpUnlocked: " + doubleJumpUnlocked + "\n");
+            writer.write("BonusHealth: " + bonusMaxHealth + "\n");
+            writer.write("BonusDamage: " + bonusDamage + "\n");
 
             writer.write("\n=== DEATH LOCATIONS ===\n");
             if (deathLocations.isEmpty()) {
-                writer.write("Flawless run! No deaths.\n");
+                writer.write("Flawless run!\n");
             } else {
-                for (int i = 0; i < deathLocations.size(); i++) {
-                    writer.write("Death " + (i + 1) + " at -> " + deathLocations.get(i) + "\n");
-                }
+                for (String loc : deathLocations) writer.write("Death at -> " + loc + "\n");
             }
-
-            writer.close();
-            System.out.println("Telemetry successfully exported to Game_Telemetry_Data.txt");
-
         } catch (IOException e) {
-            System.out.println("Failed to export telemetry data.");
             e.printStackTrace();
         }
+    }
+
+    public void resetTracker() {
+        totalEnemiesDefeated = totalDeaths = potionsCollected = 0;
+        deathLocations.clear();
     }
     public int getTotalEnemiesDefeated() {
         return totalEnemiesDefeated;
     }
-
-    public int getPotionsCollected() {
+    public int getPotionsCollected(){
         return potionsCollected;
     }
-
-    public int getTotalDeaths() {
+    public int getTotalDeaths(){
         return totalDeaths;
     }
-
-    // Optional: Reset stats if they hit replay
-    public void resetTracker() {
-        totalEnemiesDefeated = 0;
-        totalDeaths = 0;
-        potionsCollected = 0;
-        deathLocations.clear();
+    public int getSavedCoins(){
+        return savedCoins;
     }
-
 }

@@ -5,9 +5,7 @@ import static util.HelpMethods.*;
 import static util.Constants.*;
 import static util.Constants.Directions.*;
 
-import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.Point;
+import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 
@@ -73,13 +71,24 @@ public class Player extends Entity {
         this.playerCharacter = playerCharacter;
         this.playing = playing;
         this.state = IDLE;
-        this.maxHealth = 100;
+        int bonusHealth = playing.getStatsTracker().getBonusMaxHealth();
+        this.maxHealth = 100+bonusHealth;
         this.currentHealth = maxHealth;
         this.walkSpeed = Game.SCALE * 1.0f;
-        animations = LoadSave.loadAnimations(playerCharacter);
         statusBarImg = LoadSave.GetSpriteAtlas(LoadSave.STATUS_BAR);
+        animations = LoadSave.loadAnimations(playerCharacter);
         initHitbox(playerCharacter.hitboxW, playerCharacter.hitboxH);
+        updateSpeed();
         initAttackBox();
+    }
+    // In Player.java
+    public void updateSpeed() {
+        // 1.0f is your current default. Let's make it 1.4f if bought.
+        if (playing.getStatsTracker().isSpeedBoostUnlocked()) {
+            this.walkSpeed = Game.SCALE * 1.4f;
+        } else {
+            this.walkSpeed = Game.SCALE * 1.0f;
+        }
     }
 
     public void setSpawn(Point spawn) {
@@ -179,12 +188,13 @@ public class Player extends Entity {
             return;
         attackChecked = true;
 
-        // Base damage for a normal attack
-        int damage = 20;
+        // 🌟 Add the Shop Bonus Damage to the Base Damage
+        int bonusDamage = playing.getStatsTracker().getBonusDamage();
+        int damage = 20 + bonusDamage;
 
         if (powerAttackActive) {
             attackChecked = false;
-            damage = 40; // Power attacks do double damage!
+            damage = 40 + (bonusDamage * 2); // Make the power attack scale too!
         }
 
         // Now we pass the damage amount to the Playing class!
@@ -248,6 +258,16 @@ public class Player extends Entity {
         // Power Bar
         g.setColor(Color.yellow);
         g.fillRect(powerBarXStart + statusBarX, powerBarYStart + statusBarY, powerWidth, powerBarHeight);
+        // 🌟 Draw Coin Counter
+        g.setColor(Color.YELLOW);
+        g.fillOval(statusBarX, statusBarY + statusBarHeight + (int)(10 * Game.SCALE), (int)(15 * Game.SCALE), (int)(15 * Game.SCALE));
+
+        g.setColor(Color.BLACK);
+        g.drawOval(statusBarX, statusBarY + statusBarHeight + (int)(10 * Game.SCALE), (int)(15 * Game.SCALE), (int)(15 * Game.SCALE));
+
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, (int)(14 * Game.SCALE)));
+        g.drawString("x " + playing.getStatsTracker().getCoins(), statusBarX + (int)(20 * Game.SCALE), statusBarY + statusBarHeight + (int)(23 * Game.SCALE));
     }
 
     private void updateAnimationTick() {
@@ -316,6 +336,7 @@ public class Player extends Entity {
 
         if (jump)
             jump();
+        jump=false;
 
         if (!inAir)
             if (!powerAttackActive)
@@ -370,30 +391,31 @@ public class Player extends Entity {
     }
 
     private void jump() {
-        if (jumpLocked) return; // Stop if they haven't let go of the key yet!
-
-        if (inAir) {
-            if (canDoubleJump) {
-                canDoubleJump = false;
-                airSpeed = jumpSpeed;
-                playing.getGame().getAudioPlayer().playEffect(AudioPlayer.JUMP);
-                jumpLocked = true; // Lock it again!
-            }
-            return;
+        // 1. If we are on the ground, do a normal jump
+        if (!inAir) {
+            playing.getGame().getAudioPlayer().playEffect(AudioPlayer.JUMP);
+            inAir = true;
+            airSpeed = jumpSpeed;
+            return; // Exit here, we are now in the air
         }
 
-        // Normal Jump
-        playing.getGame().getAudioPlayer().playEffect(AudioPlayer.JUMP);
-        inAir = true;
-        airSpeed = jumpSpeed;
-        canDoubleJump = true;
-        jumpLocked = true; // Lock it!
+        // 2. If we are in the air, check if we can double jump
+        if (inAir && !jumpLocked) {
+            // Only jump if we have the upgrade
+            if (playing.getStatsTracker().isDoubleJumpUnlocked()) {
+                airSpeed = jumpSpeed;
+                playing.getGame().getAudioPlayer().playEffect(AudioPlayer.JUMP);
+
+                // 🌟 CRITICAL: Lock the double jump immediately so you can't do it again
+                jumpLocked = true;
+            }
+        }
     }
 
     private void resetInAir() {
         inAir = false;
         airSpeed = 0;
-        canDoubleJump = false; // Reset it when we touch the ground
+        jumpLocked=false;
     }
 
     private void updateXPos(float xSpeed) {
@@ -412,8 +434,11 @@ public class Player extends Entity {
         if (value < 0) {
             if (state == HIT)
                 return;
-            else
+            else {
                 newState(HIT);
+                // 🌟 THE FIX: Spawn red text ANYTIME the player takes damage!
+                playing.addDamageText((int) hitbox.x, (int) hitbox.y, Math.abs(value), Color.RED);
+            }
         }
 
         currentHealth += value;
@@ -479,9 +504,6 @@ public class Player extends Entity {
     public void setJump(boolean jump) {
         this.jump = jump;
         // When you let go of the spacebar, unlock the jump!
-        if (!jump) {
-            jumpLocked = false;
-        }
     }
 
     public void resetAll() {
@@ -495,9 +517,10 @@ public class Player extends Entity {
         powerAttackActive = false;
         powerAttackTick = 0;
         powerValue = powerMaxValue;
-
+        this.canDoubleJump=playing.getStatsTracker().isDoubleJumpUnlocked();
         hitbox.x = x;
         hitbox.y = y;
+        updateSpeed();
         resetAttackBox();
 
         if (!IsEntityOnFloor(hitbox, lvlData))
@@ -523,6 +546,14 @@ public class Player extends Entity {
             changePower(-60);
         }
 
+    }
+    public void increaseMaxHealth(int amount) {
+        int previousHealth = maxHealth;
+        maxHealth += amount;
+        currentHealth += amount; // Give them the health they just bought!
+
+        // 🌟 DEBUG PRINT: Verify the stats changed!
+        System.out.println("DEBUG [Player]: Max Health upgraded to " + maxHealth + " | Current Health: " + currentHealth + "| Previous Health "+ previousHealth);
     }
 
 }

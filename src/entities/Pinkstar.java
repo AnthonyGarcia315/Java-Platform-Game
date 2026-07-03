@@ -24,6 +24,7 @@ public class Pinkstar extends Enemy {
     public void update(int[][] lvlData, Playing playing) {
         updateBehavior(lvlData, playing);
         updateAnimationTick();
+        updateBurn(playing);
     }
 
     private void updateBehavior(int[][] lvlData, Playing playing) {

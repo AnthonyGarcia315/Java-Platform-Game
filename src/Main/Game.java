@@ -15,7 +15,7 @@ public class Game implements Runnable {
     private final int UPS_SET = 200;
 
     private GameWindow gameWindow; // 🌟 Restored GameWindow reference!
-
+    private Shop shop;
     private Playing playing;
     private Menu menu;
     private Credits credits;
@@ -51,6 +51,7 @@ public class Game implements Runnable {
     }
 
     private void initClasses() {
+        statsTracker = new StatsTracker();
         audioOptions = new AudioOptions(this);
         audioPlayer = new AudioPlayer();
         menu = new Menu(this);
@@ -58,9 +59,10 @@ public class Game implements Runnable {
         playerSelection = new PlayerSelection(this);
         credits = new Credits(this);
         gameOptions = new GameOptions(this);
+        shop = new Shop(this);
 
         // 🌟 Restored Stats initialization!
-        statsTracker = new StatsTracker();
+
         stats = new GameStates.Stats(this);
     }
 
@@ -78,6 +80,7 @@ public class Game implements Runnable {
             case CREDITS -> credits.update();
             case STATS -> stats.update(); // 🌟 Restored!
             case QUIT -> System.exit(0);
+            case SHOP -> shop.update();
         }
     }
 
@@ -90,8 +93,19 @@ public class Game implements Runnable {
             case OPTIONS -> gameOptions.draw(g);
             case CREDITS -> credits.draw(g);
             case STATS -> stats.draw(g); // 🌟 Restored!
+            case SHOP -> shop.draw(g);
         }
     }
+    public float getMouseXScale() {
+        // Compares the CURRENT window panel width to the standard GAME width
+        return (float) gamePanel.getWidth() / GAME_WIDTH;
+    }
+
+    public float getMouseYScale() {
+        // Compares the CURRENT window panel height to the standard GAME height
+        return (float) gamePanel.getHeight() / GAME_HEIGHT;
+    }
+    public Shop getShop() { return shop; }
 
     @Override
     public void run() {

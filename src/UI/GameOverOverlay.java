@@ -53,7 +53,13 @@ public class GameOverOverlay {
 
     }
     private boolean isIn(UrmButton b, MouseEvent e){
-        return b.getBounds().contains(e.getX(),e.getY());
+        float scaleX = playing.getGame().getMouseXScale();
+        float scaleY = playing.getGame().getMouseYScale();
+
+        int gameMouseX = (int) (e.getX() / scaleX);
+        int gameMouseY = (int) (e.getY() / scaleY);
+
+        return b.getBounds().contains(gameMouseX, gameMouseY);
     }
     public void update(){
         menu.update();

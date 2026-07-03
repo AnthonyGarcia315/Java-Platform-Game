@@ -26,6 +26,9 @@ public class ObjectManager {
     private ArrayList<Potion> potions;
     private ArrayList<GameContainer> containers;
     private ArrayList<Projectile> projectiles = new ArrayList<>();
+    private BufferedImage[] coinImgs;
+    // 🌟 1. COIN LIST
+    private ArrayList<Coin> coins = new ArrayList<>();
 
     private Level currentLevel;
 
@@ -44,7 +47,7 @@ public class ObjectManager {
     public void checkSpikesTouched(Enemy e) {
         for (Spike s : currentLevel.getSpikes())
             if (s.getHitbox().intersects(e.getHitbox()))
-                e.hurt(200);
+                e.hurt(200,playing );
     }
 
     public void checkObjectTouched(Rectangle2D.Float hitbox) {
@@ -56,6 +59,17 @@ public class ObjectManager {
                     applyEffectToPlayer(p);
                 }
             }
+
+        // 🌟 2. COIN COLLISION
+        for (Coin c : coins) {
+            if (c.isActive()) {
+                if (hitbox.intersects(c.getHitbox())) {
+                    c.setActive(false);
+                    playing.getGame().getStatsTracker().addCoins(COIN_VALUE);
+                    // playing.getGame().getAudioPlayer().playEffect(audio.AudioPlayer.COIN_PICKUP);
+                }
+            }
+        }
     }
 
     public void applyEffectToPlayer(Potion p) {
@@ -81,13 +95,15 @@ public class ObjectManager {
 
     public void loadObjects(Level newLevel) {
         if (playing != null && playing.getPlayer() != null) {
-            playing.getPlayer().resetAll(); // Or your specific player position reset method
+            playing.getPlayer().resetAll();
         }
         currentLevel = newLevel;
         potions = new ArrayList<>(newLevel.getPotions());
         containers = new ArrayList<>(newLevel.getContainers());
         projectiles.clear();
 
+        // 🌟 3. LOAD COINS FROM LEVEL (We will add this to Level.java next!)
+        coins = new ArrayList<>(newLevel.getCoins());
     }
 
     private void loadImgs() {
@@ -127,6 +143,12 @@ public class ObjectManager {
         grassImgs = new BufferedImage[2];
         for (int i = 0; i < grassImgs.length; i++)
             grassImgs[i] = grassTemp.getSubimage(32 * i, 0, 32, 32);
+        BufferedImage coinSprite = LoadSave.GetSpriteAtlas(LoadSave.COIN_SPRITE);
+        coinImgs = new BufferedImage[10];
+        for (int i = 0; i < coinImgs.length; i++) {
+            // Cuts the image into 16x16 squares
+            coinImgs[i] = coinSprite.getSubimage(i * COIN_WIDTH_DEFAULT, 0, COIN_WIDTH_DEFAULT, COIN_HEIGHT_DEFAULT);
+        }
     }
 
     public void update(int[][] lvlData, Player player) {
@@ -139,9 +161,13 @@ public class ObjectManager {
             if (gc.isActive())
                 gc.update();
 
+        // 🌟 4. UPDATE COINS
+        for (Coin c : coins)
+            if (c.isActive())
+                c.update();
+
         updateCannons(lvlData, player);
         updateProjectiles(lvlData, player);
-
     }
 
     private void updateBackgroundTrees() {
@@ -158,8 +184,6 @@ public class ObjectManager {
                     player.changeHealth(-25);
                     p.setActive(false);
                 } else if (checkProjectileHittingEnemies(p)) {
-                    // The helper method now handles setting p.setActive(false) and returning true
-                    // which stops further checking on this projectile for this frame loop
                     continue;
                 } else if (IsProjectileHittingLevel(p, lvlData)) {
                     p.setActive(false);
@@ -167,48 +191,44 @@ public class ObjectManager {
             }
         }
     }
+
     private boolean checkProjectileHittingEnemies(Projectile p) {
         entities.EnemyManager enemyManager = playing.getEnemyManager();
 
-        // 1. Check Crabs
         for (entities.Crabby c : currentLevel.getCrabs()) {
             if (c.isActive() && c.getState() != util.Constants.EnemyConstants.DEAD && c.getState() != util.Constants.EnemyConstants.HIT) {
                 if (p.getHitbox().intersects(c.getHitbox())) {
-                    enemyManager.checkEnemyHit(p.getHitbox(), 40);
-                    p.setActive(false); // 🌟 Force kill the projectile instantly
-                    return true;        // 🌟 Break out immediately so no other checks happen
+                    c.hurt(40,playing);
+                    p.setActive(false);
+                    return true;
                 }
             }
         }
 
-        // 2. Check Pinkstars
         for (entities.Pinkstar pink : currentLevel.getPinkstars()) {
             if (pink.isActive() && pink.getState() != util.Constants.EnemyConstants.DEAD && pink.getState() != util.Constants.EnemyConstants.HIT) {
                 if (p.getHitbox().intersects(pink.getHitbox())) {
-                    enemyManager.checkEnemyHit(p.getHitbox(), 40);
+                    pink.hurt(40,playing);
                     p.setActive(false);
                     return true;
                 }
             }
         }
 
-        // 3. Check Sharks
         for (entities.Shark s : currentLevel.getSharks()) {
             if (s.isActive() && s.getState() != util.Constants.EnemyConstants.DEAD && s.getState() != util.Constants.EnemyConstants.HIT) {
                 if (p.getHitbox().intersects(s.getHitbox())) {
-                    enemyManager.checkEnemyHit(p.getHitbox(), 40);
+                    s.hurt(40,playing);
                     p.setActive(false);
                     return true;
                 }
             }
         }
-
         return false;
     }
 
     private boolean isPlayerInRange(Cannon c, Player player) {
         int absValue = (int) Math.abs(player.getHitbox().x - c.getHitbox().x);
-        // 🌟 INCREASE RADIUS: Allow tracking across wider hallways/rooms (12 tiles instead of 5)
         return absValue <= Game.TILES_SIZE * 5;
     }
 
@@ -218,8 +238,6 @@ public class ObjectManager {
                 return true;
             }
         } else if (c.getObjType() == CANNON_RIGHT) {
-            // Right-facing cannon only shoots if the player's X coordinate
-            // is greater than the cannon's X coordinate (player is to the right)
             if (c.getHitbox().x < player.getHitbox().x) {
                 return true;
             }
@@ -230,27 +248,26 @@ public class ObjectManager {
     private void updateCannons(int[][] lvlData, Player player) {
         for (Cannon c : currentLevel.getCannons()) {
             if (!c.doAnimation && !c.isOnCooldown()) {
-                int yDiff = Math.abs(c.getTileY() - player.getTileY());
 
-                if (yDiff <= 1)
-                    if (isPlayerInRange(c, player))
+                // 🌟 THE FIX: Must be on the exact same Y-Tile!
+                if (c.getTileY() == player.getTileY()) {
+
+                    if (isPlayerInRange(c, player)) {
                         if (isPlayerInfrontOfCannon(c, player)) {
 
-                            // 🌟 THE FIX: Offset the starting position based on orientation!
-                            // If it's a right-facing cannon, shift the checking hitbox forward by 1 tile
-                            // so it clears the solid background wall block safely.
                             Rectangle2D.Float shiftedHitbox = new Rectangle2D.Float(
                                     c.getHitbox().x, c.getHitbox().y, c.getHitbox().width, c.getHitbox().height
                             );
 
                             if (c.getObjType() == CANNON_RIGHT) {
-                                shiftedHitbox.x += Game.TILES_SIZE; // Shift start point 1 tile right!
+                                shiftedHitbox.x += Game.TILES_SIZE;
                             }
 
-                            // Use our safely shifted hitbox for the line-of-sight calculation
                             if (CanCannonSeePlayer(lvlData, player.getHitbox(), shiftedHitbox, c.getTileY()))
                                 c.setAnimation(true);
                         }
+                    }
+                }
             }
 
             c.update();
@@ -278,7 +295,23 @@ public class ObjectManager {
         drawTraps(g, xLvlOffset);
         drawCannons(g, xLvlOffset);
         drawProjectiles(g, xLvlOffset);
+
+        // 🌟 5. DRAW COINS
+        drawCoins(g, xLvlOffset);
+
         drawGrass(g, xLvlOffset);
+    }
+
+    // 🌟 ADDED DRAW METHOD FOR COINS
+    private void drawCoins(Graphics g, int xLvlOffset) {
+        for (Coin c : coins) {
+            if (c.isActive()) {
+                g.drawImage(coinImgs[c.getAniIndex()],
+                        (int) (c.getHitbox().x - c.getxDrawOffset() - xLvlOffset),
+                        (int) (c.getHitbox().y - c.getyDrawOffset()),
+                        COIN_WIDTH, COIN_HEIGHT, null);
+            }
+        }
     }
 
     private void drawGrass(Graphics g, int xLvlOffset) {
@@ -288,7 +321,6 @@ public class ObjectManager {
 
     public void drawBackgroundTrees(Graphics g, int xLvlOffset) {
         for (BackgroundTree bt : currentLevel.getTrees()) {
-
             int type = bt.getType();
             if (type == 9)
                 type = 8;
@@ -298,7 +330,6 @@ public class ObjectManager {
     }
 
     private void drawProjectiles(Graphics g, int xLvlOffset) {
-        // 🌟 FIX: Using a standard indexed loop makes this 100% thread-safe
         for (int i = 0; i < projectiles.size(); i++) {
             Projectile p = projectiles.get(i);
             if (p.isActive()) {
@@ -323,7 +354,6 @@ public class ObjectManager {
     private void drawTraps(Graphics g, int xLvlOffset) {
         for (Spike s : currentLevel.getSpikes())
             g.drawImage(spikeImg, (int) (s.getHitbox().x - xLvlOffset), (int) (s.getHitbox().y - s.getyDrawOffset()), SPIKE_WIDTH, SPIKE_HEIGHT, null);
-
     }
 
     private void drawContainers(Graphics g, int xLvlOffset) {
@@ -355,6 +385,10 @@ public class ObjectManager {
         for (GameContainer gc : containers)
             gc.reset();
         for (Cannon c : currentLevel.getCannons())
+            c.reset();
+
+        // 🌟 6. RESET COINS
+        for (Coin c : coins)
             c.reset();
     }
 }

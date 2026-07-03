@@ -6,6 +6,7 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 
 import Main.Game;
+import Main.GameWindow;
 import UI.MenuButton;
 import util.LoadSave;
 
@@ -109,7 +110,12 @@ public class Menu extends State implements Statemethods {
 
     @Override
     public void keyPressed(KeyEvent e) {
+        // Press 'S' on the main menu to open the shop!
+        if (e.getKeyCode() == KeyEvent.VK_S) {
+            Gamestate.state = Gamestate.SHOP;
+        }
     }
+
 
     public void mouseClicked(MouseEvent e) {
         // TODO Auto-generated method stub

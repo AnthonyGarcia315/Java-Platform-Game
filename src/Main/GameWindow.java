@@ -108,6 +108,13 @@ public class GameWindow {
 
         gamePanel.requestFocusInWindow();
     }
+    public void setFullScreen(boolean fullScreen) {
+        if (fullScreen) {
+            setWindowMode(WindowMode.EXCLUSIVE_FULLSCREEN);
+        } else {
+            setWindowMode(WindowMode.WINDOWED);
+        }
+    }
 
     private void resetPlayerInputFlags() {
         if (GameStates.Gamestate.state == GameStates.Gamestate.PLAYING) {

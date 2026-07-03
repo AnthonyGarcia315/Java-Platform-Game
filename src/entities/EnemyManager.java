@@ -116,47 +116,64 @@ public class EnemyManager {
     }
 
     public boolean checkEnemyHit(Rectangle2D.Float attackBox, int damageAmount) {
+        // --- ADD THIS CHECK ---
+        boolean fireBladeUnlocked = playing.getStatsTracker().hasFireBlade();
+
         for (Crabby c : currentLevel.getCrabs())
             if (c.isActive() && c.getState() != DEAD && c.getState() != HIT)
                 if (attackBox.intersects(c.getHitbox())) {
-                    c.hurt(damageAmount);
+                    performPlayerAttack(c,damageAmount);
 
-                    // 🌟 ADDED: Did this hit kill the Crab?
+                    // 🌟 TRIGGER FIRE
+                    if (fireBladeUnlocked) c.setOnFire();
+
                     if (c.getCurrentHealth() <= 0) {
                         playing.getStatsTracker().recordEnemyDefeated();
                     }
-
                     return true;
                 }
 
         for (Pinkstar p : currentLevel.getPinkstars())
             if (p.isActive() && p.getState() != DEAD && p.getState() != HIT)
-                if (!(p.getState() == ATTACK && p.getAniIndex() >= 3)) // Pinkstar block logic
+                if (!(p.getState() == ATTACK && p.getAniIndex() >= 3))
                     if (attackBox.intersects(p.getHitbox())) {
-                        p.hurt(damageAmount);
+                        performPlayerAttack(p,damageAmount);
 
-                        // 🌟 ADDED: Did this hit kill the Pinkstar?
+                        // 🌟 TRIGGER FIRE
+                        if (fireBladeUnlocked) p.setOnFire();
+
                         if (p.getCurrentHealth() <= 0) {
                             playing.getStatsTracker().recordEnemyDefeated();
                         }
-
                         return true;
                     }
 
         for (Shark s : currentLevel.getSharks())
             if (s.isActive() && s.getState() != DEAD && s.getState() != HIT)
                 if (attackBox.intersects(s.getHitbox())) {
-                    s.hurt(damageAmount);
+                    performPlayerAttack(s,damageAmount);
 
-                    // 🌟 ADDED: Did this hit kill the Shark?
+                    // 🌟 TRIGGER FIRE
+                    if (fireBladeUnlocked) s.setOnFire();
+
                     if (s.getCurrentHealth() <= 0) {
                         playing.getStatsTracker().recordEnemyDefeated();
                     }
-
                     return true;
                 }
 
         return false;
+    }
+    // Add this new method in EnemyManager.java
+// Inside EnemyManager.java
+    public void performPlayerAttack(Enemy e, int damageAmount) {
+        // Pass 'playing' to the new hurt method
+        e.hurt(damageAmount, playing);
+
+        // Trigger fire ONLY for player attacks
+        if (playing.getStatsTracker().hasFireBlade()) {
+            e.setOnFire();
+        }
     }
 
     private void loadEnemyImgs() {

@@ -3,6 +3,7 @@ package entities;
 import static util.Constants.EnemyConstants.*;
 import static util.HelpMethods.*;
 
+import java.awt.*;
 import java.awt.geom.Rectangle2D;
 
 import GameStates.Playing;
@@ -21,6 +22,13 @@ public abstract class Enemy extends Entity {
     protected boolean active = true;
     protected boolean attackChecked;
     protected int attackBoxOffsetX;
+    // --- FIRE BLADE (DOT) VARIABLES ---
+    protected boolean onFire = false;
+    protected int burnTicks = 0;
+    protected int burnTimer = 0;
+    // Assuming your game runs at 120 UPS (Updates Per Second).
+    // This means 120 ticks = 1 second.
+    protected final int BURN_COOLDOWN = 120;
 
     public Enemy(float x, float y, int width, int height, int enemyType) {
         super(x, y, width, height);
@@ -29,6 +37,36 @@ public abstract class Enemy extends Entity {
         maxHealth = GetMaxHealth(enemyType);
         currentHealth = maxHealth;
         walkSpeed = Game.SCALE * 0.35f;
+    }
+    public void setOnFire() {
+        this.onFire = true;
+        this.burnTicks = 3; // Enemy will take damage 3 times (3 seconds total)
+        this.burnTimer = 0; // Reset the timer in case they are already on fire
+    }
+
+    protected void updateBurn(Playing playing) {
+        if (onFire && active && state != DEAD) {
+            burnTimer++;
+
+            // Trigger the burn damage every 1 second (120 updates)
+            if (burnTimer >= BURN_COOLDOWN) {
+                burnTimer = 0;
+                burnTicks--;
+
+                // Deal 1 damage silently (no knockback/stun)
+                currentHealth -= 3;
+                playing.addDamageText((int)hitbox.x, (int)hitbox.y, 3, Color.ORANGE);
+
+                if (currentHealth <= 0) {
+                    newState(DEAD);
+                }
+
+                // Turn off fire when out of ticks
+                if (burnTicks <= 0) {
+                    onFire = false;
+                }
+            }
+        }
     }
 
     protected void updateAttackBox() {
@@ -61,7 +99,7 @@ public abstract class Enemy extends Entity {
             updateInAir(lvlData);
             playing.getObjectManager().checkSpikesTouched(this);
             if (IsEntityInWater(hitbox, lvlData))
-                hurt(maxHealth);
+                hurt(maxHealth,playing);
         }
     }
 
@@ -134,8 +172,9 @@ public abstract class Enemy extends Entity {
         return false;
     }
 
-    public void hurt(int amount) {
+    public void hurt(int amount, Playing playing) {
         currentHealth -= amount;
+        playing.addDamageText((int)hitbox.x, (int)hitbox.y, amount, Color.RED);
         if (currentHealth <= 0)
             newState(DEAD);
         else {
@@ -203,9 +242,11 @@ public abstract class Enemy extends Entity {
         newState(IDLE);
         active = true;
         airSpeed = 0;
-
         pushDrawOffset = 0;
 
+        // Add these two lines!
+        onFire = false;
+        burnTicks = 0;
     }
 
     public int flipX() {

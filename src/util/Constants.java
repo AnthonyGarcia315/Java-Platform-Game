@@ -49,6 +49,9 @@ public class Constants {
         public static final int RED_POTION_VALUE = 15;
         public static final int BLUE_POTION_VALUE = 10;
 
+        public static final int COIN = 10;
+        public static final int COIN_VALUE = 1;
+
         public static final int CONTAINER_WIDTH_DEFAULT = 40;
         public static final int CONTAINER_HEIGHT_DEFAULT = 30;
         public static final int CONTAINER_WIDTH = (int) (Game.SCALE * CONTAINER_WIDTH_DEFAULT);
@@ -69,6 +72,12 @@ public class Constants {
         public static final int CANNON_WIDTH = (int) (CANNON_WIDTH_DEFAULT * Game.SCALE);
         public static final int CANNON_HEIGHT = (int) (CANNON_HEIGHT_DEFAULT * Game.SCALE);
 
+        // Add these sizes with your other object sizes (like POTION_WIDTH)
+        public static final int COIN_WIDTH_DEFAULT = 16; // Change if your frame size is different!
+        public static final int COIN_HEIGHT_DEFAULT = 16;
+        public static final int COIN_WIDTH = (int) (Game.SCALE * 14);
+        public static final int COIN_HEIGHT = (int) (Game.SCALE * 14);
+
         public static int GetSpriteAmount(int object_type) {
             switch (object_type) {
                 case RED_POTION, BLUE_POTION:
@@ -77,6 +86,8 @@ public class Constants {
                     return 8;
                 case CANNON_LEFT, CANNON_RIGHT:
                     return 7;
+                case COIN: // 🌟 Add the coin here so it doesn't crash!
+                    return 10;
             }
             return 1;
         }

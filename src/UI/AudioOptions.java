@@ -54,8 +54,16 @@ public class AudioOptions {
 
     public void mouseDragged(MouseEvent e) {
         if (volumeButton.isMousePressed()) {
+
+            // 🌟 1. Scale the mouse X coordinate for dragging!
+            float scaleX = game.getMouseXScale();
+            int gameMouseX = (int) (e.getX() / scaleX);
+
             float valueBefore = volumeButton.getFloatValue();
-            volumeButton.changeX(e.getX());
+
+            // Pass the SCALED coordinate into the changeX method
+            volumeButton.changeX(gameMouseX);
+
             float valueAfter = volumeButton.getFloatValue();
             if (valueBefore != valueAfter)
                 game.getAudioPlayer().setVolume(valueAfter);
@@ -106,7 +114,11 @@ public class AudioOptions {
     }
 
     private boolean isIn(MouseEvent e, PauseButton b) {
-        return b.getBounds().contains(e.getX(), e.getY());
+        float scaleX = game.getMouseXScale();
+        float scaleY = game.getMouseYScale();
+        int gameMouseX = (int) (e.getX() / scaleX);
+        int gameMouseY = (int) (e.getY() / scaleY);
+        return b.getBounds().contains(gameMouseX, gameMouseY);
     }
 
 }

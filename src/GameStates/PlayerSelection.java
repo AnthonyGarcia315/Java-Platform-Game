@@ -106,16 +106,21 @@ public class PlayerSelection extends State implements Statemethods {
 
     @Override
     public void mouseReleased(MouseEvent e) {
-
         if (isIn(e, playButton)) {
             if (playButton.isMousePressed()) {
 
+                // 1. Set the character they chose
                 game.getPlaying().setPlayerCharacter(characterAnimations[playerIndex].getPc());
+
+                // 🌟 2. THE FIX: Load the saved level before we start!
+                game.getPlaying().resumeGame();
+
+                // 3. Set the music for whatever level we just loaded
                 game.getAudioPlayer().setLevelSong(game.getPlaying().getLevelManager().getLevelIndex());
 
+                // 4. Finally, switch the screen to the game!
                 playButton.applyGamestate();
             }
-
         }
 
         resetButtons();

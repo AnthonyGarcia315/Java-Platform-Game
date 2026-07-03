@@ -20,6 +20,7 @@ public class Shark extends Enemy {
         updateBehavior(lvlData, playing);
         updateAnimationTick();
         updateAttackBoxFlip();
+        updateBurn(playing);
     }
 
     private void updateBehavior(int[][] lvlData, Playing playing) {

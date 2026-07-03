@@ -21,7 +21,7 @@ public class LevelManager {
         createWater();
         levels = new ArrayList<>();
         buildAllLevels();
-//        this.lvlIndex=4;
+//        this.lvlIndex=1;
     }
 
     private void createWater() {
