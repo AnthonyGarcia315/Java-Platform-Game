@@ -22,8 +22,8 @@ public class Player extends Entity {
     private boolean canDoubleJump = false;
     private boolean left, right, jump;
     private int[][] lvlData;
-    private float xDrawOffset = 21 * Game.SCALE;
-    private float yDrawOffset = 4 * Game.SCALE;
+//    private float xDrawOffset = 21 * Game.SCALE;
+//    private float yDrawOffset = 4 * Game.SCALE;
 
     // Jumping / Gravity
     private float jumpSpeed = -2.25f * Game.SCALE;
@@ -64,16 +64,18 @@ public class Player extends Entity {
     private int powerAttackTick;
     private int powerGrowSpeed = 50;
     private int powerGrowTick;
+    private final PlayerCharacters playerCharacter;
 
-    public Player(float x, float y, int width, int height, Playing playing) {
-        super(x, y, width, height);
+    public Player(PlayerCharacters playerCharacter, Playing playing) {
+        super(0, 0, (int) (playerCharacter.spriteW*Game.SCALE), (int) (playerCharacter.spriteH*Game.SCALE));
+        this.playerCharacter= playerCharacter;
         this.playing = playing;
         this.state = IDLE;
         this.maxHealth = 100;
         this.currentHealth = maxHealth;
         this.walkSpeed = Game.SCALE * 1.0f;
         loadAnimations();
-        initHitbox(20, 27);
+        initHitbox(playerCharacter.hitboxW, playerCharacter.hitboxH);
         initAttackBox();
     }
 
@@ -114,7 +116,7 @@ public class Player extends Entity {
                     inAir = true;
                     airSpeed = 0;
                 }
-            } else if (aniIndex == GetSpriteAmount(DEAD) - 1 && aniTick >= ANI_SPEED - 1) {
+            } else if (aniIndex == playerCharacter.GetSpriteAmount(DEAD) - 1 && aniTick >= ANI_SPEED - 1) {
                 playing.setGameOver(true);
                 playing.getGame().getAudioPlayer().stopSong();
                 playing.getGame().getAudioPlayer().playEffect(AudioPlayer.GAMEOVER);
@@ -137,7 +139,7 @@ public class Player extends Entity {
         updateAttackBox();
 
         if (state == HIT) {
-            if (aniIndex <= GetSpriteAmount(state) - 3)
+            if (aniIndex <= playerCharacter.GetSpriteAmount(state) - 3)
                 pushBack(pushBackDir, lvlData, 1.25f);
             updatePushBackDrawOffset();
         } else
@@ -230,7 +232,7 @@ public class Player extends Entity {
     }
 
     public void render(Graphics g, int lvlOffset) {
-        g.drawImage(animations[state][aniIndex], (int) (hitbox.x - xDrawOffset) - lvlOffset + flipX, (int) (hitbox.y - yDrawOffset + (int) (pushDrawOffset)), width * flipW, height, null);
+        g.drawImage(animations[playerCharacter.getRowIndex(state)][aniIndex], (int) (hitbox.x - playerCharacter.drawXoffset) - lvlOffset + flipX, (int) (hitbox.y - playerCharacter.drawYoffset + (int) (pushDrawOffset)), width * flipW, height, null);
 //		drawHitbox(g, lvlOffset);
 //		drawAttackBox(g, lvlOffset);
         drawUI(g);
@@ -257,7 +259,7 @@ public class Player extends Entity {
         if (aniTick >= ANI_SPEED) {
             aniTick = 0;
             aniIndex++;
-            if (aniIndex >= GetSpriteAmount(state)) {
+            if (aniIndex >= playerCharacter.GetSpriteAmount(state)) {
                 aniIndex = 0;
                 attacking = false;
                 attackChecked = false;
@@ -449,12 +451,14 @@ public class Player extends Entity {
     }
 
     private void loadAnimations() {
-        BufferedImage img = LoadSave.GetSpriteAtlas(LoadSave.PLAYER_ATLAS);
-        animations = new BufferedImage[7][8];
+        BufferedImage img = LoadSave.GetSpriteAtlas(playerCharacter.playerAtlas);
+        animations = new BufferedImage[playerCharacter.rowA][playerCharacter.colA];
+        int spriteW = playerCharacter.getSpriteW();
+        int spriteH = playerCharacter.getSpriteH();
         for (int j = 0; j < animations.length; j++)
             for (int i = 0; i < animations[j].length; i++)
-                animations[j][i] = img.getSubimage(i * 64, j * 40, 64, 40);
-
+                animations[j][i] = img.getSubimage(i * spriteW, j * spriteH, spriteW, spriteH);
+        System.out.println(playerCharacter.playerAtlas);
         statusBarImg = LoadSave.GetSpriteAtlas(LoadSave.STATUS_BAR);
     }
 

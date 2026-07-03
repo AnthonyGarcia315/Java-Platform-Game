@@ -18,6 +18,7 @@ import UI.GameCompletedOverlay;
 import UI.GameOverOverlay;
 import UI.LevelCompletedOverlay;
 import UI.PauseOverlay;
+import entities.PlayerCharacters;
 import util.LoadSave;
 import effects.DialogueEffect;
 import effects.Rain;
@@ -147,7 +148,7 @@ public class Playing extends State implements Statemethods {
         enemyManager = new EnemyManager(this);
         objectManager = new ObjectManager(this);
 
-        player = new Player(200, 200, (int) (64 * Game.SCALE), (int) (40 * Game.SCALE), this);
+        player = new Player(PlayerCharacters.ORC, this);
         player.loadLvlData(levelManager.getCurrentLevel().getLevelData());
         player.setSpawn(levelManager.getCurrentLevel().getPlayerSpawn());
 
