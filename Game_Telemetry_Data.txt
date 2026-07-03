@@ -1,11 +1,7 @@
 === GAME COMPLETION TELEMETRY ===
-Total Enemies Defeated: 85
-Potions Collected: 11
-Total Player Deaths: 5
+Total Enemies Defeated: 31
+Potions Collected: 5
+Total Player Deaths: 0
 
 === DEATH LOCATIONS ===
-Death 1 at -> X: 2433.00, Y: 718.52
-Death 2 at -> X: 3456.00, Y: 427.80
-Death 3 at -> X: 4242.00, Y: 363.00
-Death 4 at -> X: 4292.00, Y: 714.60
-Death 5 at -> X: 2040.00, Y: 714.60
+Flawless run! No deaths.

@@ -75,4 +75,5 @@ public class StatsTracker {
         potionsCollected = 0;
         deathLocations.clear();
     }
+
 }

@@ -26,18 +26,23 @@ public class Menu extends State implements Statemethods {
     private void loadBackground() {
         backgroundImg = LoadSave.GetSpriteAtlas(LoadSave.MENU_BACKGROUND);
         menuWidth = (int) (backgroundImg.getWidth() * Game.SCALE);
-        menuHeight = (int) (backgroundImg.getHeight() *1.15* Game.SCALE);
+        menuHeight = (int) (backgroundImg.getHeight() * Game.SCALE);
         menuX = Game.GAME_WIDTH / 2 - menuWidth / 2;
-        menuY = (int) (2 * Game.SCALE);
+        menuY = (int) (25 * Game.SCALE);
     }
 
     private void loadButtons() {
-        buttons[0] = new MenuButton(Game.GAME_WIDTH / 2, (int) (120 * Game.SCALE), 0, Gamestate.PLAYING);
-        buttons[1] = new MenuButton(Game.GAME_WIDTH / 2, (int) (180 * Game.SCALE), 1, Gamestate.OPTIONS);
-        buttons[2] = new MenuButton(Game.GAME_WIDTH / 2, (int) (240 * Game.SCALE), 3, Gamestate.CREDITS);
-        buttons[3] = new MenuButton(Game.GAME_WIDTH / 2, (int) (305 * Game.SCALE), 4, Gamestate.STATS);
-        buttons[4] = new MenuButton(Game.GAME_WIDTH / 2, (int) (370 * Game.SCALE), 2, Gamestate.QUIT);
+        int startY = (int) (110 * Game.SCALE);
+        int spacing = (int) (60 * Game.SCALE);
 
+        buttons[0] = new MenuButton(Game.GAME_WIDTH / 2, startY, 0, Gamestate.PLAYER_SELECTION);
+        buttons[1] = new MenuButton(Game.GAME_WIDTH / 2, startY + spacing, 1, Gamestate.OPTIONS);
+
+        // Stats button using index 4 from your updated button atlas
+        buttons[2] = new MenuButton(Game.GAME_WIDTH / 2, startY + (spacing * 2), 4, Gamestate.STATS);
+
+        buttons[3] = new MenuButton(Game.GAME_WIDTH / 2, startY + (spacing * 3), 3, Gamestate.CREDITS);
+        buttons[4] = new MenuButton(Game.GAME_WIDTH / 2, startY + (spacing * 4), 2, Gamestate.QUIT);
     }
 
     @Override

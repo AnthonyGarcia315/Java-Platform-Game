@@ -33,7 +33,7 @@ public class GameWindow {
             jframe.dispose();
         }
 
-        jframe = new JFrame();
+        jframe = new JFrame("Pirates Revenge");
         jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         try {
             java.io.InputStream is = getClass().getResourceAsStream("/icon.png");
@@ -114,6 +114,9 @@ public class GameWindow {
             gamePanel.getGame().getPlaying().getPlayer().resetDirBooleans();
         }
         gamePanel.requestFocusInWindow();
+    }
+    public GamePanel getGamePanel() {
+        return gamePanel;
     }
 
     public WindowMode getCurrentMode() {
