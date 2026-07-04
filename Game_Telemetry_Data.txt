@@ -1,7 +1,10 @@
 === GAME COMPLETION TELEMETRY ===
-Total Enemies Defeated: 31
-Potions Collected: 5
+Total Enemies Defeated: 109
+Potions Collected: 20
 Total Player Deaths: 0
+DoubleJumpUnlocked: true
+BonusHealth: 380
+BonusDamage: 12
 
 === DEATH LOCATIONS ===
-Flawless run! No deaths.
+Flawless run!

@@ -1,32 +1,15 @@
 package Main;
 
 import java.awt.Graphics;
-
 import audio.AudioPlayer;
 import GameStates.*;
 import UI.AudioOptions;
-import util.StatsTracker; // 🌟 Restored Import!
+import entities.PlayerCharacters;
+import util.StatsTracker;
 
 public class Game implements Runnable {
 
-    private GamePanel gamePanel;
-    private Thread gameThread;
-    private final int FPS_SET = 120;
-    private final int UPS_SET = 200;
-
-    private GameWindow gameWindow; // 🌟 Restored GameWindow reference!
-    private Shop shop;
-    private Playing playing;
-    private Menu menu;
-    private Credits credits;
-    private PlayerSelection playerSelection;
-    private GameOptions gameOptions;
-    private AudioOptions audioOptions;
-    private AudioPlayer audioPlayer;
-
-    private Stats stats; // 🌟 Restored Stats state!
-    private StatsTracker statsTracker; // 🌟 Restored Telemetry!
-
+    // --- CONSTANTS ---
     public final static int TILES_DEFAULT_SIZE = 32;
     public final static float SCALE = 2f;
     public final static int TILES_IN_WIDTH = 26;
@@ -35,35 +18,57 @@ public class Game implements Runnable {
     public final static int GAME_WIDTH = TILES_SIZE * TILES_IN_WIDTH;
     public final static int GAME_HEIGHT = TILES_SIZE * TILES_IN_HEIGHT;
 
+    private final int FPS_SET = 120;
+    private final int UPS_SET = 200;
     private final boolean SHOW_FPS_UPS = true;
 
+    // --- CORE COMPONENTS ---
+    private GamePanel gamePanel;
+    private Thread gameThread;
+    private GameWindow gameWindow;
+    private AudioPlayer audioPlayer;
+    private StatsTracker statsTracker;
+
+    // --- GAME STATES & MENUS ---
+    private Shop shop;
+    private Playing playing;
+    private Menu menu;
+    private Credits credits;
+    private PlayerSelection playerSelection;
+    private GameOptions gameOptions;
+    private AudioOptions audioOptions;
+    private Stats stats;
+
+    // --- CONSTRUCTOR ---
     public Game() {
         System.out.println("size: " + GAME_WIDTH + " : " + GAME_HEIGHT);
         initClasses();
-        gamePanel = new GamePanel(this);
 
-        // 🌟 Restored Window Logic!
+        gamePanel = new GamePanel(this);
         gameWindow = new GameWindow(gamePanel);
         gamePanel.setFocusable(true);
-
         gamePanel.requestFocusInWindow();
+
         startGameLoop();
     }
 
+    // --- INITIALIZATION ---
     private void initClasses() {
         statsTracker = new StatsTracker();
         audioOptions = new AudioOptions(this);
         audioPlayer = new AudioPlayer();
+
         menu = new Menu(this);
         playing = new Playing(this);
         playerSelection = new PlayerSelection(this);
         credits = new Credits(this);
         gameOptions = new GameOptions(this);
         shop = new Shop(this);
-
-        // 🌟 Restored Stats initialization!
-
         stats = new GameStates.Stats(this);
+
+        playing.setPlayerCharacter(PlayerCharacters.PIRATE);
+        playing.getLevelManager().setLevelIndex(2);
+        playing.loadNextLevel();
     }
 
     private void startGameLoop() {
@@ -71,47 +76,11 @@ public class Game implements Runnable {
         gameThread.start();
     }
 
-    public void update() {
-        switch (Gamestate.state) {
-            case MENU -> menu.update();
-            case PLAYER_SELECTION -> playerSelection.update();
-            case PLAYING -> playing.update();
-            case OPTIONS -> gameOptions.update();
-            case CREDITS -> credits.update();
-            case STATS -> stats.update(); // 🌟 Restored!
-            case QUIT -> System.exit(0);
-            case SHOP -> shop.update();
-        }
-    }
-
-    @SuppressWarnings("incomplete-switch")
-    public void render(Graphics g) {
-        switch (Gamestate.state) {
-            case MENU -> menu.draw(g);
-            case PLAYER_SELECTION -> playerSelection.draw(g);
-            case PLAYING -> playing.draw(g);
-            case OPTIONS -> gameOptions.draw(g);
-            case CREDITS -> credits.draw(g);
-            case STATS -> stats.draw(g); // 🌟 Restored!
-            case SHOP -> shop.draw(g);
-        }
-    }
-    public float getMouseXScale() {
-        // Compares the CURRENT window panel width to the standard GAME width
-        return (float) gamePanel.getWidth() / GAME_WIDTH;
-    }
-
-    public float getMouseYScale() {
-        // Compares the CURRENT window panel height to the standard GAME height
-        return (float) gamePanel.getHeight() / GAME_HEIGHT;
-    }
-    public Shop getShop() { return shop; }
-
+    // --- CORE GAME LOOP ---
     @Override
     public void run() {
         double timePerFrame = 1000000000.0 / FPS_SET;
         double timePerUpdate = 1000000000.0 / UPS_SET;
-
         long previousTime = System.nanoTime();
 
         int frames = 0;
@@ -122,7 +91,6 @@ public class Game implements Runnable {
         double deltaF = 0;
 
         while (true) {
-
             long currentTime = System.nanoTime();
 
             deltaU += (currentTime - previousTime) / timePerUpdate;
@@ -141,26 +109,62 @@ public class Game implements Runnable {
                 deltaF--;
             }
 
-            if (SHOW_FPS_UPS)
+            if (SHOW_FPS_UPS) {
                 if (System.currentTimeMillis() - lastCheck >= 1000) {
                     lastCheck = System.currentTimeMillis();
                     System.out.println("FPS: " + frames + " | UPS: " + updates);
                     frames = 0;
                     updates = 0;
                 }
+            }
         }
     }
 
+    public void update() {
+        switch (Gamestate.state) {
+            case MENU -> menu.update();
+            case PLAYER_SELECTION -> playerSelection.update();
+            case PLAYING -> playing.update();
+            case OPTIONS -> gameOptions.update();
+            case CREDITS -> credits.update();
+            case STATS -> stats.update();
+            case QUIT -> System.exit(0);
+            case SHOP -> shop.update();
+        }
+    }
+
+    @SuppressWarnings("incomplete-switch")
+    public void render(Graphics g) {
+        switch (Gamestate.state) {
+            case MENU -> menu.draw(g);
+            case PLAYER_SELECTION -> playerSelection.draw(g);
+            case PLAYING -> playing.draw(g);
+            case OPTIONS -> gameOptions.draw(g);
+            case CREDITS -> credits.draw(g);
+            case STATS -> stats.draw(g);
+            case SHOP -> shop.draw(g);
+        }
+    }
+
+    // --- MISC GAME LOGIC ---
     public void windowFocusLost() {
         if (Gamestate.state == Gamestate.PLAYING)
             playing.getPlayer().resetDirBooleans();
     }
 
     // --- GETTERS ---
-    public GameWindow getGameWindow() { return gameWindow; } // 🌟 Restored!
-    public util.StatsTracker getStatsTracker() { return statsTracker; } // 🌟 Restored!
-    public Stats getStats() { return stats; } // 🌟 Restored!
+    public float getMouseXScale() {
+        return (float) gamePanel.getWidth() / GAME_WIDTH;
+    }
 
+    public float getMouseYScale() {
+        return (float) gamePanel.getHeight() / GAME_HEIGHT;
+    }
+
+    public GameWindow getGameWindow() { return gameWindow; }
+    public util.StatsTracker getStatsTracker() { return statsTracker; }
+    public Stats getStats() { return stats; }
+    public Shop getShop() { return shop; }
     public Menu getMenu() { return menu; }
     public Playing getPlaying() { return playing; }
     public Credits getCredits() { return credits; }

@@ -104,4 +104,7 @@ public class StatsTracker {
     public int getSavedCoins(){
         return savedCoins;
     }
+    public void resetlvl(){
+        highestLevel=0;
+    }
 }
